@@ -9,6 +9,7 @@ cmds() {
 	echo "src - jump to source code files"
 	echo "webtunnel - Easy shortcut to setting up a local port forward to a web server"
 	echo "web3tunnel - The forbidden triple tunnel through a jump + main server to a web server"
+	echo "jvs - Show all java versions"
 	echo "jv - Run a specific version of java"
 	echo "jvc - Run a specific version of javac"
 	echo "finder - open folder in Finder"
@@ -120,6 +121,12 @@ web3tunnel() {
 }
 #
 # Simple java version switcher
+jvs() {
+	echo "================================\nProperly installed\n================================"
+	/usr/libexec/java_home -V
+	echo "\n================================\nAll available\n================================"
+	mdfind -name 'java' | grep '/bin/java$'
+}
 jv() {
 	if [ $# -lt 1 ]; then
 		echo "Usage: $0 <version> <rest of arguments passed to java>"
