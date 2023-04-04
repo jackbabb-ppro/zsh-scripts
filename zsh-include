@@ -63,8 +63,12 @@ pyscripts() {
 		ls -1 "$MYDIR/python"
 				return
 		fi
+	if [ ! -f "$MYDIR/python/venv/bin/python3" ]; then
+		echo "Error: setup venv. Check $MYDIR/python/README.md"
+		return 1
+	fi
 	SCRIPT_TO_RUN=$1 && shift
-	python3 "$SCRIPT_TO_RUN" $@
+	"$MYDIR/python/venv/bin/python3" "$SCRIPT_TO_RUN" $@
 }
 #
 # src code jumping
