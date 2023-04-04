@@ -1,0 +1,219 @@
+MYDIR=${0:a:h}
+TMP_PORT_443="$(jot -r 1 40000 50000)"
+autoload -U compinit && compinit
+#
+# List out all the commands I've created
+cmds() {
+	echo "scripts - List and execute custom scripts"
+	echo "pyscripts - List and execute custom python scripts"
+	echo "src - jump to source code files"
+	echo "webtunnel - Easy shortcut to setting up a local port forward to a web server"
+	echo "web3tunnel - The forbidden triple tunnel through a jump + main server to a web server"
+	echo "jv - Run a specific version of java"
+	echo "jvc - Run a specific version of javac"
+	echo "finder - open folder in Finder"
+	echo "lsdir - LS helper for large dirs"
+	echo "svnstash - Archive files that have changed in svn, similar to git stash push"
+	echo "svnapply - Extract a svnpush archive to a project, similar to git stash apply"
+	echo "slog - svn log --limit alias"
+	echo "slogfinity - svn log no limit, auto less"
+	echo "gone - git branch that no longer have an upstream"
+	echo "granch - git branches in column A, their upstreams in col B"
+	echo "gyeet - delete a branch with confirmation to force delete if neeeded"
+	echo "gswitch - fetch and switch with one command"
+}
+#
+# List and execute custom bash/python scripts
+compdef _bashcomplete scripts
+_bashcomplete() {
+	_arguments '1:filename:->files'
+	case "$state" in
+			files)
+				local -a bashfiles
+			bashfiles=( $(basename $MYDIR/bash/*.sh) )
+				_values 'bash file' $bashfiles
+			;;
+	esac
+}
+scripts() {
+	if [ $# -lt 1 ]; then
+				echo "Pass in the name of the script to execute"
+		ls -1 "$MYDIR/bash"
+				return
+		fi
+	SCRIPT_TO_RUN=$1 && shift
+	"$MYDIR/bash/$SCRIPT_TO_RUN" $@
+}
+#
+# TODO: some bug causing basename not to pull all files from this dir
+compdef _pycomplete pyscripts
+_pycomplete() {
+	_arguments '1:filename:->files'
+	case "$state" in
+			files)
+				local -a pyfiles
+			pyfiles=( $MYDIR/python/*.py )
+				_values 'python file' $pyfiles
+			;;
+	esac
+}
+pyscripts() {
+	if [ $# -lt 1 ]; then
+				echo "Pass in the name of the python script to execute"
+		ls -1 "$MYDIR/python"
+				return
+		fi
+	SCRIPT_TO_RUN=$1 && shift
+	python3 "$SCRIPT_TO_RUN" $@
+}
+#
+# src code jumping
+compdef _src_completion src
+_src_completion() {
+	_arguments '1:filename:->files'
+	case "$state" in
+			files)
+			local -a srcrepos
+			while read sdir; do
+				srcrepos+=( $(basename $sdir/*) )
+			done < "$MYDIR/src.env"
+				_values 'src file' $srcrepos
+			;;
+	esac
+}
+src() {
+	if [ $# -lt 1 ]; then
+		echo "Put folders to search in $MYDIR/src.env"
+		echo "Usage: $0 <repo>"
+		return 0
+		fi
+	while read sdir; do
+		if [ -d "$sdir/$1" ]; then
+			cd "$sdir/$1"
+			return 0
+		fi
+	done < "$MYDIR/src.env"
+	return 1
+}
+#
+# Web tunnelling helpers
+webtunnel() {
+	if [ $# -ne 2 ]; then
+		echo "Double tunnel, port 80 and 443 (local <~> jump-server <~> web-server)"
+		echo "Usage: $0 <jump-server> <web-server>"
+		return
+	fi
+	sudo ssh $SSH_USER@$1 -F $HOME/.ssh/config -L 127.0.0.1:80:$2:80 -L 127.0.0.1:443:$2:443 -N
+}
+web3tunnel() {
+	if [ $# -ne 3 ]; then
+		echo "Triple tunnel, port 443 (local <~> jump-server <~> second-jump-server <~> web-server)"
+		echo "Usage: $0 <jump-server> <second-jump-server> <web-server>"
+		return
+	fi
+	sudo ssh -A -t -l $SSH_USER $1 -L 443:127.0.0.1:$TMP_PORT_443 \
+	ssh -A -t -l $SSH_USER -F /home/$SSH_USER/.ssh/config $2 -L $TMP_PORT_443:$3:443 -N
+}
+#
+# Simple java version switcher
+jv() {
+	if [ $# -lt 1 ]; then
+		echo "Usage: $0 <version> <rest of arguments passed to java>"
+		return
+	fi
+
+	# Set new JAVA_HOME
+	JAVA_HOME=`/usr/libexec/java_home -v $1`
+	THISJAVA="$JAVA_HOME/bin/java"
+	echo "Launching java from $JAVA_HOME"
+	# take off java version and pass rest of arguments to java
+	shift
+	$THISJAVA $@
+}
+jvc() {
+	if [ $# -lt 1 ]; then
+		echo "Usage: $0 <version> <rest of arguments passed to javac>"
+		return
+	fi
+	JAVA_HOME=`/usr/libexec/java_home -v $1`
+	THISJAVA="$JAVA_HOME/bin/javac"
+	echo "Launching javac from $JAVA_HOME"
+	shift
+	$THISJAVA $@
+}
+#
+# macOS helpers
+finder() {
+	if [ $# = 0 ]; then
+		echo "Usage: $0 <relative or absolute path(s) to folder(s)...>"
+		return
+	fi
+	open -a finder -- $@
+}
+lsdir() {
+	find -s . -type d -maxdepth 1 | less
+}
+#
+# svn helpers
+svnstash() {
+	if [ $# -lt 1 ]; then
+		echo "Cannot zip deleted, external, or *.class files"
+		echo "Usage: $0 <output file>"
+		return
+	fi
+	# Add unversioned files
+	# svn add * --force
+	# Get every file, except deleted and externals and *.class
+	ZIPMOD_UUID=$(uuidgen)
+	svn status | grep "^[^D^X^\!]" | grep -v "class$" | awk '{ print substr($0, 9) }' > zipmod-$ZIPMOD_UUID.txt
+	zip $1 -@ < zipmod-$ZIPMOD_UUID.txt
+	echo "List of files: zipmod-$ZIPMOD_UUID.txt"
+}
+svnapply() {
+	if [ $# -lt 2 ]; then
+		echo "Inflates stash to current directory"
+		echo "Usage: $0 <zipmod file> <output directory>"
+		return
+	fi
+	unzip $1 -d $2
+}
+slog() {
+	SLOG_LIMIT=${1:-10}
+	svn log . --limit "$SLOG_LIMIT"
+}
+slogfinity() {
+	svn log . | less
+}
+#
+# git helpers
+gone() {
+	git fetch -p && git branch -vv | awk '/: gone]/{print $1}'
+}
+granch() {
+	[ $# -gt 0 ] && shift
+	git fetch
+	git branch --format "%(refname:short) %(upstream:short) %(upstream:track)" $@ | column -t
+}
+gyeet() {
+	if [ $# -lt 1 ]; then
+		echo "Usage: $0 <branch name>"
+		return
+	fi
+	git fetch origin --prune
+	git branch --delete $1
+	if [ $? -ne 0 ]; then
+		echo -n "Force delete? [y/N]"
+		read answer
+		if [[ "$answer" == "Y" || "$answer" == "y" ]]; then
+			git branch -D $1
+		fi
+	fi
+}
+gswitch() {
+	if [ $# -lt 1 ]; then
+		echo "Usage: $0 <branch name>"
+		return
+	fi
+	git fetch origin --prune
+	git switch $1
+}
