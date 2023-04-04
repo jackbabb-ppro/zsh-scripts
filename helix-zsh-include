@@ -1,0 +1,154 @@
+#!/bin/zsh
+#
+# SVN / Helix TeamHub shortcuts & utility commands
+#
+#
+#
+# 0. Helper to consume arguments
+MYDIR=${0:a:h}
+
+__heconsume() {
+	HE_ARG_NUM=$#
+	HE_SCRIPT=$1
+	[ $# -gt 0 ] && shift
+
+	if [ "$1" = 'h' ] || [ "$1" = 'help' ]; then
+		__heusage "$HE_SCRIPT"
+		return 1
+	fi
+
+	if ! svn info --show-item url; then
+		echo "Error: Not an svn directory"
+		return 1
+	fi
+
+	HE_SVN_REV=${1:-HEAD}
+	[ $# -gt 0 ] && shift
+
+	# A python script run here (not public) should print env variable setters for:
+	# HE_ROOT_PATH (the absolute path to the root of the svn folder)
+	# HE_SVN_PATH (the relative path from the root to the current folder)
+	# HE_URLESC_PATH (the url-escaped version of HE_SVN_PATH)
+	# HE_SVN_ORG (the helix organization name)
+	# HE_SVN_REPO (the helix repo name)
+	# HE_SVN_PROJ (the helix project name)
+	IN_DIR=${1:-.}
+	while read envscripts; do
+		eval $(pyscripts $MYDIR/python/$envscripts "$IN_DIR")
+	done < "$MYDIR/helix.env"
+	[ $# -gt 0 ] && shift
+
+	# Build URLs used by functions
+	HE_HTTPS_REPO_URL="https://helixteamhub.cloud/$HE_SVN_ORG/projects/$HE_SVN_PROJ/repositories/$HE_SVN_REPO"
+	HE_SSH_REPO_URL="svn+ssh://hth@helixteamhub.cloud/$HE_SVN_ORG/projects/$HE_SVN_PROJ/repositories/subversion/$HE_SVN_REPO"
+	HE_SSH_FILEATREV_URL="$HE_SSH_REPO_URL/$HE_SVN_PATH@$HE_SVN_REV"
+
+	# Debug
+	echo "        Organization: $HE_SVN_ORG"
+	echo "             Project: $HE_SVN_PROJ"
+	echo "          Repository: $HE_SVN_REPO"
+	echo "          Revision #: $HE_SVN_REV\n"
+	echo "    Path to svn root: $HE_ROOT_PATH"
+	echo "  Path from svn root: $HE_SVN_PATH"
+	echo "Url escaped of above: $HE_URLESC_PATH\n"
+	echo "     Helix https url: $HE_HTTPS_REPO_URL"
+	echo "       Helix ssh url: $HE_SSH_REPO_URL"
+	echo "  Helix ssh full url: $HE_SSH_FILEATREV_URL"
+
+	# Confirm that we should run the command
+	[ $HE_ARG_NUM -lt 2 ] && echo "Info: use h or help for usage"
+	[ -t 1 ] && read "?Type any key to confirm run, Ctrl + C to cancel..."
+	return 0
+}
+__heusage() {
+	echo "Description: $HE_USAGE_DESC"
+	echo "Usage: $1 <revision number (default: HEAD)> <folder/file relative to current directory (default: cwd)>"
+}
+#
+# 1. helix -- Open helix website to see any changeset from helix
+helix() {
+	HE_USAGE_DESC="Open helix website to see any changeset from helix"
+	if __heconsume $0 $@; then
+		open "$HE_HTTPS_REPO_URL/changesets/$HE_SVN_REV"
+	fi
+}
+#
+# 2. helog -- Open helix website to see a file's history from at any revision
+helog() {
+	HE_USAGE_DESC="Open helix website to see a file's history from at any revision"
+	if __heconsume $0 $@; then
+		open "$HE_HTTPS_REPO_URL/history/$HE_SVN_REV?path=$HE_URLESC_PATH"
+	fi
+}
+#
+# 3. hetree -- Open helix website to a directory/revision
+hetree() {
+	HE_USAGE_DESC="Open helix website to a directory/revision"
+	if __heconsume $0 $@; then
+		open "$HE_HTTPS_REPO_URL/tree/$HE_SVN_REV?path=$HE_URLESC_PATH"
+	fi
+}
+#
+# 4. hediff -- Diff a revision in vscode
+hediff() {
+	HE_USAGE_DESC="Diff the revision specified in vscode"
+	if __heconsume $0 $@; then
+		#HE_REVPREV=$(($HE_SVN_REV-1))
+		svn diff --force -c$HE_SVN_REV
+	fi
+}
+#
+# 5. histcheckout - Easily checkout files/folders deleted in previous revisions
+histcheckout() {
+	HE_USAGE_DESC="Easily checkout files/folders deleted in previous revisions"
+	if __heconsume $0 $@; then
+		svn checkout $HE_SSH_FILEATREV_URL "/tmp/histfind/$HE_SVN_REV/$HE_SVN_PATH"
+		cd "/tmp/histfind/$HE_SVN_REV/$HE_SVN_PATH"
+	fi
+}
+#
+# 6. histlog - Search across fractured history
+# For example, let's say some folder was deleted,
+# and another folder with the same name was checked in overtop.
+# To find that old folder, 
+# $ histloglast something HEAD
+#    ------------------------------------------------------------------------
+#    r5 | user | 2007-06-05 11:00:00 -0500 (Tue, 05 Jun 2007) | 2 lines
+#    
+#    Brought back old changes :)
+#    
+#    ------------------------------------------------------------------------
+# $ histloglast something 4
+#    ------------------------------------------------------------------------
+#    r1 | user | 2007-06-05 10:00:00 -0500 (Tue, 05 Jun 2007) | 2 lines
+#    
+#    Initial commit :)
+#    
+#    ------------------------------------------------------------------------
+# and so on until you find the files you are looking for. You can use histlog
+# to see the entire brief log, or histlogv to see file path changes as well.
+histlog() {
+	HE_USAGE_DESC="Show full svn log of a directory/file"
+	if __heconsume $0 $@; then
+		svn log $HE_SSH_FILEATREV_URL
+	fi
+}
+histloglast() {
+	HE_USAGE_DESC="Show last svn revision of a directory/file"
+	if __heconsume $0 $@; then
+		svn log -r1:$HE_SVN_REV --limit 1 --stop-on-copy $HE_SSH_FILEATREV_URL
+	fi
+}
+histloglastv() {
+	HE_USAGE_DESC="Show last svn revision of a directory/file - verbose"
+	if __heconsume $0 $@; then
+		svn log -v -r1:$HE_SVN_REV --limit 1 $HE_SSH_FILEATREV_URL
+	fi
+}
+histlogv() {
+	HE_USAGE_DESC="Show full svn log of a directory/file - verbose"
+	if __heconsume $0 $@; then
+		svn log -v $HE_SSH_FILEATREV_URL
+	fi
+}
+#
