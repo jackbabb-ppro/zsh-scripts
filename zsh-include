@@ -22,6 +22,7 @@ cmds() {
 	echo "granch - git branches in column A, their upstreams in col B"
 	echo "gyeet - delete a branch with confirmation to force delete if neeeded"
 	echo "gswitch - fetch and switch with one command"
+	echo "gitpr - create diff for PR preparation against base-branch"
 }
 #
 # List and execute custom bash/python scripts
@@ -227,4 +228,12 @@ gswitch() {
 	fi
 	git fetch origin --prune
 	git switch $1
+}
+gitpr() {
+	if [ $# -lt 1 ]; then
+		echo "$0: Create diff for PR preparation against base-branch"
+		echo "Usage: $0 <base-branch>"
+		return
+	fi
+	git diff `git merge-base $(git rev-parse --abbrev-ref HEAD) main`
 }
