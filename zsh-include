@@ -17,7 +17,7 @@ cmds() {
 	echo "svnstash - Archive files that have changed in svn, similar to git stash push"
 	echo "svnapply - Extract a svnpush archive to a project, similar to git stash apply"
 	echo "slog - svn log --limit alias"
-	echo "slogfinity - svn log no limit, auto less"
+	echo "slogall - svn log no limit, auto less"
 	echo "gone - git branch that no longer have an upstream"
 	echo "granch - git branches in column A, their upstreams in col B"
 	echo "gyeet - delete a branch with confirmation to force delete if neeeded"
@@ -193,7 +193,7 @@ slog() {
 	SLOG_LIMIT=${1:-10}
 	svn log . --limit "$SLOG_LIMIT"
 }
-slogfinity() {
+slogall() {
 	svn log . | less
 }
 #
@@ -235,5 +235,5 @@ gitpr() {
 		echo "Usage: $0 <base-branch>"
 		return
 	fi
-	git diff `git merge-base $(git rev-parse --abbrev-ref HEAD) main`
+	git diff `git merge-base $(git rev-parse --abbrev-ref HEAD) $1`
 }
