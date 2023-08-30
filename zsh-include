@@ -207,19 +207,18 @@ granch() {
 	git branch --format "%(refname:short) %(upstream:short) %(upstream:track)" $@ | column -t
 }
 gyeet() {
-	if [ $# -lt 1 ]; then
-		echo "Usage: $0 <branch name>"
+	# Make sure no arguments are provided
+	if [ $# -ne 0 ]; then
+		echo "Usage: $0 < branch_list"
 		return
 	fi
-	git fetch origin --prune
-	git branch --delete $1
-	if [ $? -ne 0 ]; then
-		echo -n "Force delete? [y/N]"
-		read answer
-		if [[ "$answer" == "Y" || "$answer" == "y" ]]; then
-			git branch -D $1
+
+	while read -r branch_name; do
+		git branch --delete "$branch_name"
+		if [ $? -ne 0 ]; then
+			git branch -D "$branch_name"
 		fi
-	fi
+	done
 }
 gswitch() {
 	if [ $# -lt 1 ]; then
