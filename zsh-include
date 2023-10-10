@@ -23,6 +23,7 @@ cmds() {
 	echo "gyeet - delete a branch with confirmation to force delete if neeeded"
 	echo "gswitch - fetch and switch with one command"
 	echo "gitpr - create diff for PR preparation against base-branch"
+	echo "gitall - run a basic, argumentless git command for all repos in the current folder"
 }
 #
 # List and execute custom bash/python scripts
@@ -235,4 +236,12 @@ gitpr() {
 		return
 	fi
 	git diff `git merge-base $(git rev-parse --abbrev-ref HEAD) $1`
+}
+gitall() {
+	if [ $# -lt 1 ]; then
+		echo "$0: Run a basic, argumentless git command for all repos in the current folder"
+		echo "Usage: $0 <command>"
+		return
+	fi
+	find . -type d -maxdepth 1 -print -exec git --git-dir={}/.git --work-tree=./{} $1 \;
 }
