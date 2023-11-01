@@ -118,7 +118,7 @@ web3tunnel() {
 		echo "Usage: $0 <jump-server> <second-jump-server> <web-server>"
 		return
 	fi
-	sudo ssh -A -t -l $SSH_USER $1 -L 443:127.0.0.1:$TMP_PORT_443 \
+	sudo ssh -A -t -l $SSH_USER $1 -F $HOME/.ssh/config -L 443:127.0.0.1:$TMP_PORT_443 \
 	ssh -A -t -l $SSH_USER -F /home/$SSH_USER/.ssh/config $2 -L $TMP_PORT_443:$3:443 -N
 }
 #
