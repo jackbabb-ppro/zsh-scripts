@@ -24,6 +24,7 @@ cmds() {
 	echo "gswitch - fetch and switch with one command"
 	echo "gitpr - create diff for PR preparation against base-branch"
 	echo "gitall - run a basic, argumentless git command for all repos in the current folder"
+	echo "show_color - provide hex colors without #, terminal will show a block with colors."
 }
 #
 # List and execute custom bash/python scripts
