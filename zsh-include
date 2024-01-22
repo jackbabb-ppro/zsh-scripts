@@ -259,3 +259,11 @@ gitall() {
 	fi
 	find . -type d -maxdepth 1 -print -exec git --git-dir={}/.git --work-tree=./{} $1 \;
 }
+show_color() {
+	if [ $# -lt 1 ]; then
+		echo "$0: Provide hex colors without #, terminal will show a block with colors."
+		echo "Usage: $0 <color> [<color> [...]]"
+		return
+	fi
+	perl -e 'foreach $a(@ARGV){print "\e[48:2::".join(":",unpack("C*",pack("H*",$a)))."m \e[49m "};print "\n"' "$@"
+}
