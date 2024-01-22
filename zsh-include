@@ -111,7 +111,13 @@ webtunnel() {
 		echo "Usage: $0 <jump-server> <web-server>"
 		return
 	fi
-	sudo ssh $SSH_USER@$1 -F $HOME/.ssh/config -L 127.0.0.1:80:$2:80 -L 127.0.0.1:443:$2:443 -N
+	DEBUG=""
+	echo "Debug? [y/N]"
+	read -r yn
+	if [[ "$yn" == "y" || "$yn" == "Y" ]]; then
+		DEBUG="-v"
+	fi
+	sudo ssh $SSH_USER@$1 $DEBUG -F $HOME/.ssh/config -L 127.0.0.1:80:$2:80 -L 127.0.0.1:443:$2:443 -N
 }
 web3tunnel() {
 	if [ $# -ne 3 ]; then
@@ -119,19 +125,19 @@ web3tunnel() {
 		echo "Usage: $0 <jump-server> <second-jump-server> <web-server>"
 		return
 	fi
-  DEBUG=""
-  echo "Debug? [y/N]"
-  read -r yn
-  if [[ "$yn" == "y" || "$yn" == "Y" ]]; then
-    DEBUG="-v"
-  fi
+	DEBUG=""
+	echo "Debug? [y/N]"
+	read -r yn
+	if [[ "$yn" == "y" || "$yn" == "Y" ]]; then
+		DEBUG="-v"
+	fi
 
-  CONFIG=""
-  echo "Override config file to use on second jump: [leave blank to continue]"
-  read -r ov
-  if [[ "$ov" != "" ]]; then
-    CONFIG="-F $ov"
-  fi
+	CONFIG=""
+	echo "Override config file to use on second jump: [leave blank to continue]"
+	read -r ov
+	if [[ "$ov" != "" ]]; then
+		CONFIG="-F $ov"
+	fi
 
   sudo ssh -A -t $DEBUG -l $SSH_USER $1 -F $HOME/.ssh/config -L 443:127.0.0.1:$TMP_PORT_443 \
 	ssh -A -t $DEBUG -l $SSH_USER $2 $CONFIG -L $TMP_PORT_443:$3:443 -N
