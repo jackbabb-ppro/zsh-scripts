@@ -107,7 +107,10 @@ src() {
 # Web tunnelling helpers
 webtunnel() {
 	if [ $# -ne 2 ]; then
-		echo "Double tunnel, port 80 and 443 (local <~> jump-server <~> web-server)"
+		echo "Tunnel to a web server that is only exposed to an internal network."
+		echo ""
+		echo "Jumps/open ports: local <~:22~> jump-server <~:80,443~> web-server"
+		echo ""
 		echo "Usage: $0 <jump-server> <web-server>"
 		return
 	fi
@@ -121,8 +124,12 @@ webtunnel() {
 }
 web3tunnel() {
 	if [ $# -ne 3 ]; then
-		echo "Triple tunnel, port 443 (local <~> jump-server <~> second-jump-server <~> web-server)"
+		echo "Tunnel to a web server that is only exposed to an internal network when a second-jump-server is needed. Alt usage for web-server with port 443 closed."
+		echo ""
+		echo "Jumps/open ports: local <~:22~> jump-server <~:22~> second-jump-server <~:443~> web-server"
+		echo ""
 		echo "Usage: $0 <jump-server> <second-jump-server> <web-server>"
+		echo "Alt usage: $0 <jump-server> <web-server> 127.0.0.1"
 		return
 	fi
 	DEBUG=""
