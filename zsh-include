@@ -83,7 +83,7 @@ _src_completion() {
 			files)
 			local -a srcrepos
 			while read sdir; do
-				srcrepos+=( $(basename $sdir/*) )
+				srcrepos+=( $(basename -a $sdir/*) )
 			done < "$MYDIR/src.env"
 				_values 'src file' $srcrepos
 			;;
