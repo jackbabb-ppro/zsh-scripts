@@ -107,11 +107,12 @@ src() {
 # Web tunnelling helpers
 webtunnel() {
 	if [ $# -ne 2 ]; then
-		echo "Tunnel to a web server that is only exposed to an internal network."
+		echo "Tunnel to a web server that is only exposed to an internal network. Alt usage for web server with port 80 and 443 closed."
 		echo ""
 		echo "Jumps/open ports: local <~:22~> jump-server <~:80,443~> web-server"
 		echo ""
 		echo "Usage: $0 <jump-server> <web-server>"
+		echo "Alt usage: $0 <web-server> 127.0.0.1"
 		return
 	fi
 	DEBUG=""
